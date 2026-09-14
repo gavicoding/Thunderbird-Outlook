@@ -1,0 +1,6 @@
+# exportar_eml.py e importar_thunderbird.py não precisam de dependência externa.
+# Os demais módulos e o app gráfico (migrar_app.py) precisam do que está abaixo.
+pywin32
+extract-msg
+ttkbootstrap
+pillow
