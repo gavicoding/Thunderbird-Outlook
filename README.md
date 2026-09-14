@@ -21,6 +21,10 @@ funcionam separadas - exporte numa máquina, copie a pasta gerada (fica do
 lado do `.exe`) pra um pendrive/rede, e importe em outra máquina que tenha o
 programa de destino.
 
+Cada aba também tem a opção **"Também migrar o catálogo de endereços
+(contatos)"** - desmarcada por padrão, marque se quiser levar os contatos
+junto com os e-mails.
+
 Não precisa instalar Python nem nada - só rodar o `.exe`.
 
 ## Rodando os scripts em vez do .exe
@@ -68,6 +72,34 @@ python migrar_app.py
   precisar de complemento nenhum do Thunderbird. Tudo entra dentro de uma
   pasta própria ("Importado do Outlook"), nunca mexendo nas pastas reais que
   já existem.
+
+### Catálogo de endereços (contatos) - opcional
+
+Além de e-mail, o programa também sabe migrar contatos, usando vCard
+(`.vcf`) como formato comum entre os dois lados:
+
+- **`exportar_contatos_thunderbird.py`** - lê direto o(s) banco(s) SQLite do
+  catálogo de endereços do Thunderbird (`abook.sqlite` e qualquer
+  `abook-N.sqlite` extra), sem nenhuma dependência externa (só `sqlite3` da
+  biblioteca padrão). Abre em modo só-leitura e confere se o schema esperado
+  existe antes de consultar, pra não quebrar em versões muito diferentes do
+  Thunderbird.
+
+- **`importar_contatos_outlook.py`** - `.vcf` → Outlook, via automação COM,
+  criando os contatos numa pasta própria ("Contatos Migrados do
+  Thunderbird") dentro do Catálogo de Endereços padrão, sem mexer nos
+  contatos que já existem.
+
+- **`exportar_contatos_outlook.py`** - Outlook → `.vcf`, um arquivo por
+  conta. Como escrever direto no banco de dados do Thunderbird é arriscado
+  (schema pode variar, banco pode estar em uso), esse lado **não** importa
+  automaticamente - a própria função já imprime o caminho de cada `.vcf` e a
+  instrução pra importar pelo Catálogo de Endereços do Thunderbird
+  (Ferramentas → Importar → Contatos), que é o jeito seguro e já testado
+  pela Mozilla.
+
+- **`vcard_util.py`** - conversão contato ↔ vCard 3.0 compartilhada pelos
+  três módulos acima, pra escrever e ler sempre no mesmo "dialeto".
 
 Compatibilidade do lado do Outlook: a automação funciona com qualquer
 Outlook clássico (2010, 2013, 2016, 2019, 2021, atual) - é a mesma API COM

@@ -55,6 +55,9 @@ from importar_outlook import (
 )
 from exportar_outlook import EXTRACT_MSG_DISPONIVEL, exportar_outlook_desta_maquina
 from importar_thunderbird import importar_para_thunderbird
+from exportar_contatos_thunderbird import exportar_contatos_desta_maquina as exportar_contatos_thunderbird
+from importar_contatos_outlook import importar_contatos_desta_maquina as importar_contatos_outlook
+from exportar_contatos_outlook import exportar_contatos_desta_maquina as exportar_contatos_outlook
 
 NOME_PASTA_RAIZ_OUTLOOK = "E-mails Migrados do Thunderbird"
 
@@ -76,6 +79,13 @@ def caminho_recurso(nome: str) -> Path:
 
 PASTA_EXPORTACAO_PADRAO = pasta_do_programa() / "EmailsExportados"
 PASTA_EXPORTACAO_OUTLOOK_PADRAO = pasta_do_programa() / "EmailsExportadosDoOutlook"
+# Pastas de contatos ficam FORA das pastas de e-mail de propósito: o fluxo
+# de importação de e-mail varre tudo que existir dentro de
+# PASTA_EXPORTACAO_PADRAO/PASTA_EXPORTACAO_OUTLOOK_PADRAO tratando como
+# e-mail (inclusive move os arquivos pro Thunderbird no fluxo automático) -
+# se os .vcf de contato estivessem lá dentro, seriam varridos junto.
+PASTA_CONTATOS_TB_OL = pasta_do_programa() / "ContatosExportados"
+PASTA_CONTATOS_OL_TB = pasta_do_programa() / "ContatosExportadosDoOutlook"
 PASTA_LOGS = pasta_do_programa() / "logs"
 
 
@@ -378,6 +388,8 @@ class App:
         self.pasta_importar_outlook = tk.StringVar(value="")
         self.pasta_importar_thunderbird = tk.StringVar(value="")
         self.marcar_lido_tb_ol = tk.BooleanVar(value=True)
+        self.migrar_contatos_tb_ol = tk.BooleanVar(value=False)
+        self.migrar_contatos_ol_tb = tk.BooleanVar(value=False)
         self.em_execucao = False
         self.perfis_disponiveis = []
         self.outlook_disponivel = False
@@ -499,11 +511,16 @@ class App:
         )
         self.btn_importar_ol.pack(fill="x")
 
+        tb.Checkbutton(
+            aba, text="Também migrar o catálogo de endereços (contatos)",
+            variable=self.migrar_contatos_tb_ol, bootstyle="round-toggle",
+        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
         self.btn_tudo_tb_ol = tb.Button(
             aba, text="⚡  Fazer tudo automaticamente (nesta máquina)",
             bootstyle="success", command=self._ao_clicar_tudo_thunderbird_outlook, state="disabled",
         )
-        self.btn_tudo_tb_ol.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        self.btn_tudo_tb_ol.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 0))
 
     def _montar_aba_para_thunderbird(self, aba):
         aba.columnconfigure(0, weight=1, uniform="cards2")
@@ -554,17 +571,22 @@ class App:
         )
         self.btn_importar_tb.pack(fill="x")
 
+        tb.Checkbutton(
+            aba, text="Também migrar o catálogo de endereços (contatos)",
+            variable=self.migrar_contatos_ol_tb, bootstyle="round-toggle",
+        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
         self.btn_tudo_ol_tb = tb.Button(
             aba, text="⚡  Fazer tudo automaticamente (nesta máquina)",
             bootstyle="success", command=self._ao_clicar_tudo_outlook_thunderbird, state="disabled",
         )
-        self.btn_tudo_ol_tb.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        self.btn_tudo_ol_tb.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 0))
 
         if not EXTRACT_MSG_DISPONIVEL:
             tb.Label(
                 aba, text="Pacote 'extract-msg' não encontrado - exportar do Outlook fica indisponível.",
                 bootstyle="warning",
-            ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
+            ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
     def _detectar_ambiente(self):
         def worker():
@@ -847,6 +869,9 @@ class App:
                 PASTA_EXPORTACAO_PADRAO, progresso=self._reportar_progresso,
                 contas_selecionadas=self.contas_selecionadas_tb_ol,
             )
+            if self.migrar_contatos_tb_ol.get():
+                print("\n=== EXPORTANDO CONTATOS DO THUNDERBIRD ===\n")
+                exportar_contatos_thunderbird(PASTA_CONTATOS_TB_OL)
 
         self._rodar_em_thread(tarefa)
 
@@ -863,6 +888,11 @@ class App:
                 importar_para_outlook, Path(pasta), progresso=self._reportar_progresso,
                 marcar_como_lido=self.marcar_lido_tb_ol.get(),
             )
+            if self.migrar_contatos_tb_ol.get() and PASTA_CONTATOS_TB_OL.exists():
+                print("\n=== IMPORTANDO CONTATOS PARA O OUTLOOK ===\n")
+                com_retry_automatico(
+                    importar_contatos_outlook, PASTA_CONTATOS_TB_OL, progresso=self._reportar_progresso,
+                )
 
         self._rodar_em_thread(tarefa)
 
@@ -877,12 +907,21 @@ class App:
                 PASTA_EXPORTACAO_PADRAO, progresso=self._reportar_progresso,
                 contas_selecionadas=self.contas_selecionadas_tb_ol,
             )
+            qtd_contatos = 0
+            if self.migrar_contatos_tb_ol.get():
+                print("\n=== EXPORTANDO CONTATOS DO THUNDERBIRD ===\n")
+                qtd_contatos = exportar_contatos_thunderbird(PASTA_CONTATOS_TB_OL)
             if qtd:
                 self._iniciar_fase("Fase 2 de 2 — Importando para o Outlook...")
                 print("\n=== IMPORTANDO PARA O OUTLOOK ===\n")
                 com_retry_automatico(
                     importar_para_outlook, PASTA_EXPORTACAO_PADRAO, progresso=self._reportar_progresso,
                     marcar_como_lido=self.marcar_lido_tb_ol.get(),
+                )
+            if qtd_contatos:
+                print("\n=== IMPORTANDO CONTATOS PARA O OUTLOOK ===\n")
+                com_retry_automatico(
+                    importar_contatos_outlook, PASTA_CONTATOS_TB_OL, progresso=self._reportar_progresso,
                 )
 
         self._rodar_em_thread(tarefa)
@@ -898,6 +937,12 @@ class App:
                 exportar_outlook_desta_maquina, PASTA_EXPORTACAO_OUTLOOK_PADRAO,
                 progresso=self._reportar_progresso, contas_selecionadas=self.contas_selecionadas_ol_tb,
             )
+            if self.migrar_contatos_ol_tb.get():
+                print("\n=== EXPORTANDO CONTATOS DO OUTLOOK ===\n")
+                com_retry_automatico(
+                    exportar_contatos_outlook, PASTA_CONTATOS_OL_TB,
+                    contas_selecionadas=self.contas_selecionadas_ol_tb,
+                )
 
         self._rodar_em_thread(tarefa)
 
@@ -912,6 +957,13 @@ class App:
             print(f"=== IMPORTANDO PARA O THUNDERBIRD, DE: {pasta} ===\n")
             print("(passo separado: copiando os arquivos, sem apagar a pasta de origem)\n")
             importar_desta_maquina_para_thunderbird(Path(pasta), progresso=self._reportar_progresso, mover=False)
+            if self.migrar_contatos_ol_tb.get() and PASTA_CONTATOS_OL_TB.exists():
+                print(
+                    "\nContatos exportados em:\n  " + str(PASTA_CONTATOS_OL_TB) +
+                    "\nPra importar no Thunderbird: abra o Catálogo de Endereços "
+                    "(Ferramentas -> Catálogo de Endereços), depois "
+                    "Ferramentas -> Importar -> Contatos, e escolha cada arquivo .vcf dessa pasta."
+                )
 
         self._rodar_em_thread(tarefa)
 
@@ -926,6 +978,12 @@ class App:
                 exportar_outlook_desta_maquina, PASTA_EXPORTACAO_OUTLOOK_PADRAO,
                 progresso=self._reportar_progresso, contas_selecionadas=self.contas_selecionadas_ol_tb,
             )
+            if self.migrar_contatos_ol_tb.get():
+                print("\n=== EXPORTANDO CONTATOS DO OUTLOOK ===\n")
+                com_retry_automatico(
+                    exportar_contatos_outlook, PASTA_CONTATOS_OL_TB,
+                    contas_selecionadas=self.contas_selecionadas_ol_tb,
+                )
             if qtd:
                 self._iniciar_fase("Fase 2 de 2 — Importando para o Thunderbird...")
                 print("\n=== IMPORTANDO PARA O THUNDERBIRD ===\n")
