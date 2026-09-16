@@ -110,3 +110,13 @@ tipo web/UWP), que não expõe automação nenhuma.
 
 Depois de exportar (qualquer uma das direções), dá pra abrir a pasta de
 saída e arrastar as subpastas direto para dentro do programa de destino.
+
+## ⚠️ Aviso
+
+Esta ferramenta lê e escreve e-mails e contatos direto nos perfis do
+Thunderbird e do Outlook. O uso é por sua conta e risco — faça backup do
+seu perfil/pastas antes de usar, especialmente na primeira vez. O software
+é distribuído "no estado em que se encontra" (AS IS), sem garantias de
+nenhum tipo, e o autor não se responsabiliza por eventuais perdas de dados
+decorrentes do uso. Veja a licença ([LICENSE](LICENSE)) para os termos
+completos.
