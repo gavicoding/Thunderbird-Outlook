@@ -7,7 +7,7 @@
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-Bidirectional desktop & CLI utility to migrate **emails** and **address books (contacts)** between **Mozilla Thunderbird** and **Classic Microsoft Outlook** on Windows — preserving folder hierarchy, original received timestamps, sender headers, attachments, and embedded inline images.
+Bidirectional desktop & CLI utility to migrate **emails** and **address books (contacts)** between **Mozilla Thunderbird** and **Classic Microsoft Outlook** on Windows - preserving folder hierarchy, original received timestamps, sender headers, attachments, and embedded inline images.
 
 ---
 

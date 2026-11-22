@@ -794,7 +794,7 @@ class App:
             taxa = feito / decorrido
             if taxa > 0:
                 restante = (total - feito) / taxa
-                texto_eta = f" — tempo restante estimado: ~{_formatar_duracao(restante)}"
+                texto_eta = f" - tempo restante estimado: ~{_formatar_duracao(restante)}"
 
         self.label_progresso.config(
             text=f"{_formatar_numero(feito)} / {_formatar_numero(total)} ({percentual}%){texto_eta}"
@@ -901,7 +901,7 @@ class App:
         self.pasta_importar_outlook.set(str(PASTA_EXPORTACAO_PADRAO))
 
         def tarefa():
-            self._iniciar_fase("Fase 1 de 2 — Exportando do Thunderbird...")
+            self._iniciar_fase("Fase 1 de 2 - Exportando do Thunderbird...")
             print(f"=== EXPORTANDO DO THUNDERBIRD PARA: {PASTA_EXPORTACAO_PADRAO} ===\n")
             qtd = exportar_desta_maquina(
                 PASTA_EXPORTACAO_PADRAO, progresso=self._reportar_progresso,
@@ -912,7 +912,7 @@ class App:
                 print("\n=== EXPORTANDO CONTATOS DO THUNDERBIRD ===\n")
                 qtd_contatos = exportar_contatos_thunderbird(PASTA_CONTATOS_TB_OL)
             if qtd:
-                self._iniciar_fase("Fase 2 de 2 — Importando para o Outlook...")
+                self._iniciar_fase("Fase 2 de 2 - Importando para o Outlook...")
                 print("\n=== IMPORTANDO PARA O OUTLOOK ===\n")
                 com_retry_automatico(
                     importar_para_outlook, PASTA_EXPORTACAO_PADRAO, progresso=self._reportar_progresso,
@@ -972,7 +972,7 @@ class App:
         self.pasta_importar_thunderbird.set(str(PASTA_EXPORTACAO_OUTLOOK_PADRAO))
 
         def tarefa():
-            self._iniciar_fase("Fase 1 de 2 — Exportando do Outlook...")
+            self._iniciar_fase("Fase 1 de 2 - Exportando do Outlook...")
             print(f"=== EXPORTANDO DO OUTLOOK PARA: {PASTA_EXPORTACAO_OUTLOOK_PADRAO} ===\n")
             qtd = com_retry_automatico(
                 exportar_outlook_desta_maquina, PASTA_EXPORTACAO_OUTLOOK_PADRAO,
@@ -985,7 +985,7 @@ class App:
                     contas_selecionadas=self.contas_selecionadas_ol_tb,
                 )
             if qtd:
-                self._iniciar_fase("Fase 2 de 2 — Importando para o Thunderbird...")
+                self._iniciar_fase("Fase 2 de 2 - Importando para o Thunderbird...")
                 print("\n=== IMPORTANDO PARA O THUNDERBIRD ===\n")
                 print("(fluxo automático: movendo os arquivos, sem duplicar espaço em disco)\n")
                 importar_desta_maquina_para_thunderbird(
