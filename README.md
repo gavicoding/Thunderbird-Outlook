@@ -1,122 +1,99 @@
+**🇺🇸 English** | [🇧🇷 Português](README.pt-BR.md)
+
 # Thunderbird ⇄ Outlook
 
-Ferramenta para migrar e-mails entre Thunderbird e Outlook, nos dois
-sentidos, mantendo a estrutura de pastas.
+[![CI](https://github.com/gavicoding/Thunderbird-Outlook/actions/workflows/ci.yml/badge.svg)](https://github.com/gavicoding/Thunderbird-Outlook/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-## Jeito mais fácil: `MigrarThunderbirdOutlook.exe`
+Bidirectional desktop & CLI utility to migrate **emails** and **address books (contacts)** between **Mozilla Thunderbird** and **Classic Microsoft Outlook** on Windows — preserving folder hierarchy, original received timestamps, sender headers, attachments, and embedded inline images.
 
-Programa com janela (`migrar_app.py`, empacotado como `.exe` via PyInstaller).
-Detecta sozinho o Thunderbird e o Outlook clássico desta máquina e tem duas
-abas, uma pra cada sentido:
+---
 
-- **Thunderbird → Outlook**: exporta o Thunderbird pra uma pasta `.eml` e
-  importa pro Outlook automaticamente.
-- **Outlook → Thunderbird**: exporta o Outlook pra uma pasta já no formato
-  mbox nativo do Thunderbird e copia pra dentro de `Mail/Local Folders` de um
-  perfil.
+## Key Capabilities
 
-Em cada aba, o botão **"Fazer tudo automaticamente"** roda as duas etapas
-seguidas quando ambos os programas estão na mesma máquina. As etapas também
-funcionam separadas - exporte numa máquina, copie a pasta gerada (fica do
-lado do `.exe`) pra um pendrive/rede, e importe em outra máquina que tenha o
-programa de destino.
+- **Two-Way Email Migration**:
+  - **Thunderbird → Outlook**: Exports all Thunderbird accounts, Inbox, Sent, IMAP caches, and Local Folders into standard `.eml` trees, then imports them into Classic Outlook via COM automation.
+  - **Outlook → Thunderbird**: Extracts Classic Outlook folders via COM (`.msg` → `.eml` via `extract-msg`) and writes native Thunderbird `mbox` + `.sbd` subfolder trees directly into `Mail/Local Folders`.
+- **Two-Step or One-Click Modes**:
+  - Run export & import together on the same workstation, or export on Machine A, copy the generated folder to removable media/network share, and import on Machine B.
+- **Metadata & Edge-Case Fidelity**:
+  - Resolves real email account names from Thunderbird's `prefs.js` (avoiding `mail.domain.com` vs `mail.domain.com-1` collisions).
+  - Uses Windows long-path `\\?\` prefixes to bypass the 260-character `MAX_PATH` limit on deeply nested mail folders.
+  - Clears `MSGFLAG_UNSENT` via MAPI `PropertyAccessor` and sets `PR_SENDER_*` properties so imported Outlook emails retain their **original received dates and senders** rather than appearing as newly received drafts.
+  - Non-destructive imports: places migrated emails and contacts into dedicated folders without overwriting existing mailboxes.
+- **Optional Contacts Migration (vCard 3.0)**:
+  - Reads Thunderbird's `abook.sqlite` / `abook-N.sqlite` in read-only mode with defensive schema checks (`sqlite3` stdlib) and exchanges contacts via RFC 2426 vCard 3.0 (`.vcf`).
 
-Cada aba também tem a opção **"Também migrar o catálogo de endereços
-(contatos)"** - desmarcada por padrão, marque se quiser levar os contatos
-junto com os e-mails.
+---
 
-Não precisa instalar Python nem nada - só rodar o `.exe`.
+## Architecture & Data Flow
 
-## Rodando os scripts em vez do .exe
+```mermaid
+flowchart LR
+    subgraph TB["Mozilla Thunderbird Profile"]
+        MBOX["mbox / .sbd Folders\n& prefs.js"]
+        SQL["abook*.sqlite\n(Address Book)"]
+    end
 
+    subgraph INTER["Portable Intermediate Formats"]
+        EML[".eml Tree\n(Windows \\\\?\\\\ Long Paths)"]
+        VCF["vCard 3.0 (.vcf)"]
+    end
+
+    subgraph OL["Classic Microsoft Outlook (COM)"]
+        MAIL["MailItem + MAPI\n(MSGFLAG_UNSENT=0, PR_SENDER_*)"]
+        CONT["Dedicated Contact Folder"]
+    end
+
+    MBOX -->|"exportar_eml.py"| EML
+    EML -->|"importar_outlook.py"| MAIL
+    MAIL -->|"exportar_outlook.py (extract-msg)"| EML
+    EML -->|"importar_thunderbird.py (native mbox)"| MBOX
+
+    SQL -->|"exportar_contatos_thunderbird.py"| VCF
+    VCF -->|"importar_contatos_outlook.py"| CONT
+    CONT -->|"exportar_contatos_outlook.py"| VCF
 ```
+
+---
+
+## Quick Start
+
+### Option 1: Standalone Windows Executable (`MigrarThunderbirdOutlook.exe`)
+Package or run the Tkinter/ttkbootstrap GUI (`migrar_app.py`), which automatically detects local Thunderbird profiles and Classic Outlook installations. No Python installation is required for end users when compiled via `MigrarThunderbirdOutlook.spec` (PyInstaller).
+
+### Option 2: Run from Source (Windows)
+
+```bash
 pip install -r requirements.txt
 python migrar_app.py
 ```
 
-### Módulos individuais (sem interface gráfica)
+---
 
-- **`exportar_eml.py`** - Thunderbird → `.eml`. Varre o perfil inteiro
-  (Inbox, Enviados, pastas locais, contas IMAP, subpastas), nomeia cada
-  conta pelo e-mail real (lido do `prefs.js`, evita ambiguidade tipo
-  `mail.dominio.com` vs `mail.dominio.com-1`), e usa o prefixo `\\?\` do
-  Windows pra não esbarrar no limite de 260 caracteres em pastas aninhadas.
-  Não precisa de nenhuma dependência externa.
+## CLI Modules Breakdown
 
-- **`importar_outlook.py`** - `.eml` → Outlook. Importa automaticamente via
-  automação COM, identificando pelo e-mail em qual conta já configurada no
-  Outlook cada backup deve cair (cai na conta padrão como fallback se aquela
-  conta não estiver configurada ali). Requer Outlook **clássico** (o "novo
-  Outlook" não tem essa automação) e `pywin32`.
+| Module | Direction | Dependencies | What It Does |
+| :--- | :--- | :--- | :--- |
+| `exportar_eml.py` | Thunderbird → `.eml` | Stdlib only | Walks profiles, maps accounts via `prefs.js`, exports `.eml` with `\\?\` long-path support |
+| `importar_outlook.py` | `.eml` → Outlook | `pywin32` | Rebuilds Outlook `MailItem`s via COM, clears `MSGFLAG_UNSENT`, preserves dates & senders |
+| `exportar_outlook.py` | Outlook → mbox | `pywin32`, `extract-msg` | Exports Outlook items as `.msg` and converts to RFC-compliant `.eml`/mbox |
+| `importar_thunderbird.py` | mbox → Thunderbird | Stdlib only | Copies native `mbox` + `.sbd` tree into `Mail/Local Folders/Importado do Outlook` |
+| `exportar_contatos_thunderbird.py` | Thunderbird → `.vcf` | `sqlite3` (stdlib) | Read-only extraction from `abook*.sqlite` with defensive schema detection |
+| `importar_contatos_outlook.py` | `.vcf` → Outlook | `pywin32` | Creates Outlook contacts in a dedicated folder via COM |
+| `exportar_contatos_outlook.py` | Outlook → `.vcf` | `pywin32` | Generates per-account `.vcf` files for safe import via Thunderbird UI |
+| `vcard_util.py` | Shared | Stdlib only | RFC 2426 vCard 3.0 serializer, parser, escaping, and line-unfolding |
 
-  Cada `.eml` é reconstruído como um `MailItem` novo (não usa
-  `NameSpace.OpenSharedItem`, que nos testes abre `.msg` mas recusa `.eml`
-  com erro de "caminho inválido" em builds recentes do Outlook). Isso exige
-  um cuidado extra: por padrão, todo `MailItem` criado via automação grava a
-  data de **hoje** como "recebido em", mesmo setando a propriedade de data
-  manualmente - a menos que a flag `MSGFLAG_UNSENT` seja explicitamente
-  desligada via `PropertyAccessor` antes de salvar, dizendo ao Outlook "isso
-  não é rascunho novo, é e-mail migrado". Com isso (mais `PR_SENDER_*` pro
-  remetente original), data e remetente originais ficam intactos - validado
-  com e-mails reais.
+---
 
-- **`exportar_outlook.py`** - Outlook → mbox nativo do Thunderbird. Cada
-  e-mail é salvo pelo Outlook como `.msg` e convertido pra `.eml` de verdade
-  com a biblioteca `extract-msg` (reaproveita o cabeçalho original quando
-  existe, ou sintetiza um a partir das propriedades da mensagem). Requer
-  Outlook clássico, `pywin32` e `extract-msg`.
+## Outlook Compatibility
 
-- **`importar_thunderbird.py`** - mbox → Thunderbird. Como a árvore já sai no
-  formato nativo (arquivo sem extensão = pasta, `Nome.sbd/` = subpastas), a
-  importação é só copiar pra dentro de `Mail/Local Folders` do perfil - sem
-  precisar de complemento nenhum do Thunderbird. Tudo entra dentro de uma
-  pasta própria ("Importado do Outlook"), nunca mexendo nas pastas reais que
-  já existem.
+Works with **Classic Microsoft Outlook** (`2010`, `2013`, `2016`, `2019`, `2021`, and Microsoft 365 Classic desktop client) via COM automation. Not compatible with the web-based **"New Outlook"** app, which does not expose COM automation APIs.
 
-### Catálogo de endereços (contatos) - opcional
+---
 
-Além de e-mail, o programa também sabe migrar contatos, usando vCard
-(`.vcf`) como formato comum entre os dois lados:
+## Disclaimer
 
-- **`exportar_contatos_thunderbird.py`** - lê direto o(s) banco(s) SQLite do
-  catálogo de endereços do Thunderbird (`abook.sqlite` e qualquer
-  `abook-N.sqlite` extra), sem nenhuma dependência externa (só `sqlite3` da
-  biblioteca padrão). Abre em modo só-leitura e confere se o schema esperado
-  existe antes de consultar, pra não quebrar em versões muito diferentes do
-  Thunderbird.
-
-- **`importar_contatos_outlook.py`** - `.vcf` → Outlook, via automação COM,
-  criando os contatos numa pasta própria ("Contatos Migrados do
-  Thunderbird") dentro do Catálogo de Endereços padrão, sem mexer nos
-  contatos que já existem.
-
-- **`exportar_contatos_outlook.py`** - Outlook → `.vcf`, um arquivo por
-  conta. Como escrever direto no banco de dados do Thunderbird é arriscado
-  (schema pode variar, banco pode estar em uso), esse lado **não** importa
-  automaticamente - a própria função já imprime o caminho de cada `.vcf` e a
-  instrução pra importar pelo Catálogo de Endereços do Thunderbird
-  (Ferramentas → Importar → Contatos), que é o jeito seguro e já testado
-  pela Mozilla.
-
-- **`vcard_util.py`** - conversão contato ↔ vCard 3.0 compartilhada pelos
-  três módulos acima, pra escrever e ler sempre no mesmo "dialeto".
-
-Compatibilidade do lado do Outlook: a automação funciona com qualquer
-Outlook clássico (2010, 2013, 2016, 2019, 2021, atual) - é a mesma API COM
-estável há anos. Só não funciona com o **novo Outlook** (o app reformulado
-tipo web/UWP), que não expõe automação nenhuma.
-
-## Se preferir fazer manualmente
-
-Depois de exportar (qualquer uma das direções), dá pra abrir a pasta de
-saída e arrastar as subpastas direto para dentro do programa de destino.
-
-## ⚠️ Aviso
-
-Esta ferramenta lê e escreve e-mails e contatos direto nos perfis do
-Thunderbird e do Outlook. O uso é por sua conta e risco — faça backup do
-seu perfil/pastas antes de usar, especialmente na primeira vez. O software
-é distribuído "no estado em que se encontra" (AS IS), sem garantias de
-nenhum tipo, e o autor não se responsabiliza por eventuais perdas de dados
-decorrentes do uso. Veja a licença ([LICENSE](LICENSE)) para os termos
-completos.
+This tool reads from and writes directly to Thunderbird and Outlook profiles. Always create a backup of your mail profiles before running any migration. Provided "AS IS", without warranty of any kind. See [LICENSE](LICENSE) for full details.
