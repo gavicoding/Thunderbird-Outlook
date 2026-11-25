@@ -1,9 +1,28 @@
 [🇺🇸 English](README.md) | **🇧🇷 Português**
 
-# Thunderbird ⇄ Outlook
+# Migrador Thunderbird ⇄ Outlook
 
-Ferramenta para migrar e-mails entre Thunderbird e Outlook, nos dois
-sentidos, mantendo a estrutura de pastas.
+[![CI](https://github.com/gavicoding/Thunderbird-Outlook/actions/workflows/ci.yml/badge.svg)](https://github.com/gavicoding/Thunderbird-Outlook/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Plataforma: Windows](https://img.shields.io/badge/plataforma-Windows-0078D6.svg)](https://www.microsoft.com/windows)
+[![Licença: Apache-2.0](https://img.shields.io/badge/licen%C3%A7a-Apache_2.0-green.svg)](LICENSE)
+
+Leva **e-mails e contatos** do **Mozilla Thunderbird** para o **Outlook clássico** e vice-versa, no Windows. Mantém as pastas, as **datas originais**, os remetentes, os anexos e as imagens dentro das mensagens. Tem uma janela simples para quem não quer usar linha de comando.
+
+---
+
+## Para que serve
+
+Trocar de programa de e-mail costuma dar errado de dois jeitos: as pastas se perdem ou todas as mensagens importadas aparecem com a data de hoje, como se tivessem acabado de chegar (ou como rascunhos não enviados). Este migrador foi feito justamente para evitar isso.
+
+## O que você ganha
+
+- **Histórico intacto:** cada mensagem chega com a data em que foi recebida e com o remetente certo.
+- **Nada sobrescrito:** e-mails e contatos migrados vão para pastas próprias, sem mexer na caixa que já existe.
+- **Funciona entre computadores:** exporte numa máquina, copie a pasta gerada (pendrive ou rede) e importe na outra.
+- **Contatos também:** a agenda vai junto, no formato vCard 3.0.
+
+---
 
 ## Jeito mais fácil: `MigrarThunderbirdOutlook.exe`
 
@@ -108,7 +127,7 @@ Outlook clássico (2010, 2013, 2016, 2019, 2021, atual) - é a mesma API COM
 estável há anos. Só não funciona com o **novo Outlook** (o app reformulado
 tipo web/UWP), que não expõe automação nenhuma.
 
-## Se preferir fazer manualmente
+## Se preferir fazer à mão
 
 Depois de exportar (qualquer uma das direções), dá pra abrir a pasta de
 saída e arrastar as subpastas direto para dentro do programa de destino.

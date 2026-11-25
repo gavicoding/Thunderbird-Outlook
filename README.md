@@ -11,6 +11,20 @@ Bidirectional desktop & CLI utility to migrate **emails** and **address books (c
 
 ---
 
+## In plain words
+
+Switching email programs usually goes wrong in two ways: folders get lost, or every imported message shows today's date, as if it had just arrived (or as an unsent draft).
+
+This migrator was built precisely to avoid that.
+
+**What you gain**
+
+- **History intact:** each message keeps the date it was received and the right sender.
+- **Nothing overwritten:** migrated mail and contacts go into their own folders.
+- **Works across computers:** export on one machine, copy the folder, import on the other.
+
+---
+
 ## Key Capabilities
 
 - **Two-Way Email Migration**:
