@@ -19,6 +19,7 @@ Trocar de programa de e-mail costuma dar errado de dois jeitos: as pastas se per
 
 - **Histórico intacto:** cada mensagem chega com a data em que foi recebida e com o remetente certo.
 - **Nada sobrescrito:** e-mails e contatos migrados vão para pastas próprias, sem mexer na caixa que já existe.
+- **O que você apagou continua apagado:** o Thunderbird só remove de vez uma mensagem excluída quando a pasta é compactada. Essas mensagens não são exportadas, então não voltam a aparecer no Outlook.
 - **Funciona entre computadores:** exporte numa máquina, copie a pasta gerada (pendrive ou rede) e importe na outra.
 - **Contatos também:** a agenda vai junto, no formato vCard 3.0.
 
