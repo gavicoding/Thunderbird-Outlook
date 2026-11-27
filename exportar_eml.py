@@ -155,6 +155,24 @@ def caminho_longo(caminho: Path) -> Path:
     return Path(absoluto)
 
 
+FLAG_EXCLUIDA = 0x0008  # MSG_FLAG_EXPUNGED do Thunderbird
+
+
+def mensagem_excluida(mensagem) -> bool:
+    """True quando o Thunderbird marcou a mensagem como excluída.
+
+    O Thunderbird só remove de verdade uma mensagem apagada quando a pasta é
+    compactada. Até lá ela continua no mbox, com o bit 0x0008 ligado no
+    cabeçalho X-Mozilla-Status (valor em hexadecimal). Sem esse filtro, e-mails
+    apagados voltariam a aparecer depois da migração.
+    """
+    status = (mensagem.get("X-Mozilla-Status") or "").strip()
+    try:
+        return bool(int(status, 16) & FLAG_EXCLUIDA)
+    except ValueError:
+        return False
+
+
 def parece_mbox(caminho: Path):
     """Filtra arquivos que claramente não são caixas de e-mail (índices, cache, etc)."""
     if caminho.suffix.lower() in EXTENSOES_IGNORADAS:
@@ -177,21 +195,29 @@ def converter_mbox_para_eml(caminho_mbox: Path, pasta_destino: Path):
     pasta_destino_segura = caminho_longo(pasta_destino)
     total = 0
     erros = 0
+    excluidas = 0
     try:
         for indice, mensagem in enumerate(caixa, start=1):
-            assunto = decodificar_cabecalho(mensagem.get("subject")) or f"email_{indice}"
-            nome_arquivo = f"{indice:04d}_{sanitizar_nome(assunto)}.eml"
-            if total == 0:
-                pasta_destino_segura.mkdir(parents=True, exist_ok=True)
+            if mensagem_excluida(mensagem):
+                excluidas += 1
+                continue
+            # Uma mensagem malformada não pode interromper a pasta inteira.
             try:
+                assunto = decodificar_cabecalho(mensagem.get("subject")) or f"email_{indice}"
+                nome_arquivo = f"{indice:04d}_{sanitizar_nome(assunto)}.eml"
+                conteudo = mensagem.as_bytes()
+                if total == 0:
+                    pasta_destino_segura.mkdir(parents=True, exist_ok=True)
                 with open(pasta_destino_segura / nome_arquivo, "wb") as f:
-                    f.write(mensagem.as_bytes())
+                    f.write(conteudo)
                 total += 1
-            except OSError as erro:
+            except Exception as erro:
                 erros += 1
                 print(f"  [AVISO] falhou ao gravar mensagem {indice} de '{caminho_mbox}': {erro}")
     finally:
         caixa.close()
+    if excluidas:
+        print(f"  {excluidas} mensagem(ns) excluída(s) no Thunderbird (pasta não compactada) ignorada(s)")
     if erros:
         print(f"  [AVISO] {erros} mensagem(ns) não puderam ser gravadas nesta pasta")
     return total

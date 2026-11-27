@@ -37,6 +37,7 @@ This migrator was built precisely to avoid that.
   - Uses Windows long-path `\\?\` prefixes to bypass the 260-character `MAX_PATH` limit on deeply nested mail folders.
   - Clears `MSGFLAG_UNSENT` via MAPI `PropertyAccessor` and sets `PR_SENDER_*` properties so imported Outlook emails retain their **original received dates and senders** rather than appearing as newly received drafts.
   - Non-destructive imports: places migrated emails and contacts into dedicated folders without overwriting existing mailboxes.
+  - Skips messages you already deleted in Thunderbird. Thunderbird keeps them inside the `mbox` until the folder is compacted (flag `0x0008` in `X-Mozilla-Status`); they are not exported, so they do not come back in Outlook.
 - **Optional Contacts Migration (vCard 3.0)**:
   - Reads Thunderbird's `abook.sqlite` / `abook-N.sqlite` in read-only mode with defensive schema checks (`sqlite3` stdlib) and exchanges contacts via RFC 2426 vCard 3.0 (`.vcf`).
 
